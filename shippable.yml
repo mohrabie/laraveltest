@@ -2,9 +2,6 @@
     
 language: php
 
-php:
-  - 7.2
-
 # # use this to control what branches get built.
 # # http://docs.shippable.com/ci/advancedOptions/branches/
 # branches:
