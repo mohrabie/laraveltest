@@ -1,6 +1,17 @@
 # Language setting http://docs.shippable.com/ci/languages/node/
-language: node_js
-
+    
+36 lines (35 sloc)  1.54 KB
+language: php
+php:
+  - 7.2
+branches:
+  only:
+    - dev
+    - stage
+    - master
+cache: true
+notifications:
+   email: false
 # # use this to control what branches get built.
 # # http://docs.shippable.com/ci/advancedOptions/branches/
 # branches:
@@ -51,7 +62,7 @@ resources:
     versionTemplate:
       linuxParameters:
         initProcessEnabled: true
-      memory: 100
+      memory: 500
       portMappings:
         - 80:80
 
