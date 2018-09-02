@@ -1,0 +1,91 @@
+# Language setting http://docs.shippable.com/ci/languages/node/
+language: node_js
+
+# # use this to control what branches get built.
+# # http://docs.shippable.com/ci/advancedOptions/branches/
+# branches:
+#   only:
+#     - master
+
+
+# using pre-defined build variables
+# full list http://docs.shippable.com/ci/advancedOptions/environmentVariables/
+
+build:
+  # http://docs.shippable.com/ci/shippableyml/#ci
+  ci:
+    - 'true'
+  post_ci:
+    - 'if [ $IS_PULL_REQUEST == "false" ] ; then docker build -f Dockerfile.nginx -t 050543387869.dkr.ecr.eu-west-1.amazonaws.com/nginx:$BRANCH.$BUILD_NUMBER .; fi'
+    - 'if [ $IS_PULL_REQUEST == "false" ] ; then docker push 050543387869.dkr.ecr.eu-west-1.amazonaws.com/nginx:$BRANCH.$BUILD_NUMBER ; fi'
+    - 'if [ $IS_PULL_REQUEST == "false" ] ; then shipctl post_resource_state deploy-ecs-basic-image versionName $BRANCH.$BUILD_NUMBER; fi'
+
+# Integrations are used to connect external resources to CI
+# http://docs.shippable.com/integrations/overview/
+integrations:
+  # adding awsKeys integration so that credentials are available to CI Job
+  # http://docs.shippable.com/platform/integration/aws-keys/
+  hub:
+    - integrationName: aws
+      type: amazonKeys
+      region: eu-west-1
+
+
+resources:
+  - name: deploy-ecs-basic-image
+    type: image
+    integration: aws
+    pointer:
+      sourceName: "050543387869.dkr.ecr.eu-west-1.amazonaws.com/nginx"
+    seed:
+      versionName: "latest"
+
+  - name: deploy-ecs-basic-params
+    type: params
+    version:
+      params:
+        ENVIRONMENT: "dev"
+
+  - name: deploy-ecs-basic-docker-options
+    type: dockerOptions
+    versionTemplate:
+      linuxParameters:
+        initProcessEnabled: true
+      memory: 100
+      portMappings:
+        - 80:80
+
+  - name: deploy-ecs-basic-replicas
+    type: replicas
+    version:
+      count: 1
+
+  - name: deploy-ecs-basic-ecs-cluster
+    type: cluster
+    integration: aws
+    pointer:
+      sourceName : "microservices-production" #name of the cluster to which we are deploying
+      region: "eu-west-1"
+
+jobs:
+  - name: deploy-ecs-basic_runCI
+    type: runCI
+    steps:
+      - OUT: deploy-ecs-basic-image
+
+  - name: deploy-ecs-basic-manifest
+    type: manifest
+    steps:
+     - IN: deploy-ecs-basic-image
+     - IN: deploy-ecs-basic-docker-options
+     - IN: deploy-ecs-basic-params
+     - IN: deploy-ecs-basic-replicas
+
+  - name: deploy-ecs-basic-deploy
+    type: deploy
+    steps:
+      - IN: deploy-ecs-basic-manifest
+      - IN: deploy-ecs-basic-ecs-cluster
+      - TASK: managed
+        deployMethod: replace
+
